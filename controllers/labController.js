@@ -32,7 +32,11 @@ export const getAllLabs = async (req, res, next) => {
       labs = await Lab.find(filter).sort({ name: 1 });
     }
 
-    res.json(labs);
+    res.json({
+      success: true,
+      count: labs.length,
+      labs
+    });
   } catch (error) {
     next(error);
   }

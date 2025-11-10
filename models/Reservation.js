@@ -49,9 +49,14 @@ const reservationSchema = new mongoose.Schema({
   },
   checkOutTime: {
     type: Date
+  },
+  _class: {
+    type: String,
+    default: 'com.smartlab.backend.models.Reservation'
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  strict: false // Permite campos adicionales de Spring Boot
 });
 
 // Índices compuestos para búsquedas eficientes

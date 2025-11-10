@@ -24,7 +24,11 @@ export const getAllStations = async (req, res, next) => {
       .populate('labId', 'name location')
       .sort({ code: 1 });
 
-    res.json(stations);
+    res.json({
+      success: true,
+      count: stations.length,
+      stations
+    });
   } catch (error) {
     next(error);
   }

@@ -163,7 +163,11 @@ export const getUserReservations = async (req, res, next) => {
       .populate('labId', 'name location')
       .sort({ start: -1 });
 
-    res.json(reservations);
+    res.json({
+      success: true,
+      count: reservations.length,
+      reservations
+    });
   } catch (error) {
     next(error);
   }
@@ -456,7 +460,11 @@ export const getAllReservations = async (req, res, next) => {
       .populate('labId', 'name location')
       .sort({ start: -1 });
 
-    res.json(reservations);
+    res.json({
+      success: true,
+      count: reservations.length,
+      reservations
+    });
   } catch (error) {
     next(error);
   }

@@ -1,0 +1,390 @@
+### ========================================
+### SMARTLAB API - REST CLIENT
+### ========================================
+
+### Variables
+@baseUrl = http://localhost:5000/api
+@token = 
+@adminToken = 
+@labId = 
+@stationId = 
+@reservationId = 
+@userId = 
+
+### ========================================
+### HEALTH CHECK
+### ========================================
+
+### Health Check
+GET {{baseUrl}}/health
+
+### ========================================
+### AUTENTICACIÓN
+### ========================================
+
+### Login Admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@smartlab.com",
+  "password": "Admin123!"
+}
+
+### Login Profesor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "carlos.rodriguez@smartlab.com",
+  "password": "Teacher123!"
+}
+
+### Login Estudiante
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "juan.perez@smartlab.com",
+  "password": "Student123!"
+}
+
+### Registro Nuevo Usuario
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "Nuevo",
+  "lastName": "Usuario",
+  "email": "nuevo.usuario@smartlab.com",
+  "password": "User123!",
+  "role": "student"
+}
+
+### Obtener Perfil
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### Cambiar Contraseña
+PUT {{baseUrl}}/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "Admin123!",
+  "newPassword": "NewAdmin123!"
+}
+
+### ========================================
+### LABORATORIOS
+### ========================================
+
+### Listar Todos los Labs
+GET {{baseUrl}}/labs
+Authorization: Bearer {{token}}
+
+### Buscar Labs
+GET {{baseUrl}}/labs?search=cómputo
+Authorization: Bearer {{token}}
+
+### Obtener Lab por ID
+GET {{baseUrl}}/labs/{{labId}}
+Authorization: Bearer {{token}}
+
+### Estadísticas de Lab
+GET {{baseUrl}}/labs/{{labId}}/stats
+Authorization: Bearer {{token}}
+
+### Crear Lab (ADMIN)
+POST {{baseUrl}}/labs
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Laboratorio de Robótica",
+  "code": "LAB-ROBOT-01",
+  "description": "Laboratorio especializado en robótica y automatización",
+  "location": "Edificio D - Piso 1",
+  "capacity": 18,
+  "totalStations": 18,
+  "image": "https://images.unsplash.com/photo-1561557944-6e7860d1a7eb"
+}
+
+### Actualizar Lab (ADMIN)
+PUT {{baseUrl}}/labs/{{labId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Laboratorio de Cómputo Actualizado",
+  "capacity": 35,
+  "totalStations": 35
+}
+
+### Eliminar Lab (ADMIN)
+DELETE {{baseUrl}}/labs/{{labId}}
+Authorization: Bearer {{adminToken}}
+
+### ========================================
+### ESTACIONES
+### ========================================
+
+### Listar Estaciones de un Lab
+GET {{baseUrl}}/stations?labId={{labId}}
+Authorization: Bearer {{token}}
+
+### Listar Estaciones Libres
+GET {{baseUrl}}/stations?labId={{labId}}&status=free
+Authorization: Bearer {{token}}
+
+### Obtener Estación por ID
+GET {{baseUrl}}/stations/{{stationId}}
+Authorization: Bearer {{token}}
+
+### Crear Estación (ADMIN)
+POST {{baseUrl}}/stations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "ROBOT-01",
+  "name": "Estación Robótica 1",
+  "lab": "{{labId}}",
+  "specifications": {
+    "processor": "Intel Core i9-13900K",
+    "ram": "32GB DDR5",
+    "storage": "1TB NVMe SSD",
+    "gpu": "NVIDIA RTX 4070",
+    "robotKit": "Arduino Mega 2560",
+    "os": "Windows 11 Pro"
+  }
+}
+
+### Actualizar Estación (ADMIN)
+PUT {{baseUrl}}/stations/{{stationId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Estación Actualizada",
+  "specifications": {
+    "ram": "64GB DDR5"
+  }
+}
+
+### Cambiar Estado de Estación (ADMIN)
+PATCH {{baseUrl}}/stations/{{stationId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "free"
+}
+
+### Eliminar Estación (ADMIN)
+DELETE {{baseUrl}}/stations/{{stationId}}
+Authorization: Bearer {{adminToken}}
+
+### ========================================
+### RESERVACIONES
+### ========================================
+
+### Listar Todas las Reservas (ADMIN)
+GET {{baseUrl}}/reservations
+Authorization: Bearer {{adminToken}}
+
+### Crear Reserva
+POST {{baseUrl}}/reservations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "labId": "{{labId}}",
+  "stationId": "{{stationId}}",
+  "start": "2024-01-25T14:00:00.000Z",
+  "end": "2024-01-25T16:00:00.000Z",
+  "purpose": "Práctica de programación en Python"
+}
+
+### Reservas del Usuario
+GET {{baseUrl}}/reservations/user/{{userId}}
+Authorization: Bearer {{token}}
+
+### Reservas Activas del Usuario
+GET {{baseUrl}}/reservations/user/{{userId}}?status=active
+Authorization: Bearer {{token}}
+
+### Buscar Reserva por Código
+GET {{baseUrl}}/reservations/lookup?code=ABC123
+Authorization: Bearer {{token}}
+
+### Obtener Reserva por ID
+GET {{baseUrl}}/reservations/{{reservationId}}
+Authorization: Bearer {{token}}
+
+### Check-In Manual
+PUT {{baseUrl}}/reservations/{{reservationId}}/checkin
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "method": "manual"
+}
+
+### Check-In por QR
+PUT {{baseUrl}}/reservations/{{reservationId}}/checkin
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "method": "qr"
+}
+
+### Check-Out Manual
+PUT {{baseUrl}}/reservations/{{reservationId}}/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "method": "manual"
+}
+
+### Check-Out por QR
+PUT {{baseUrl}}/reservations/{{reservationId}}/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "method": "qr"
+}
+
+### Cancelar Reserva
+DELETE {{baseUrl}}/reservations/{{reservationId}}
+Authorization: Bearer {{token}}
+
+### ========================================
+### EVENTOS EN TIEMPO REAL (SSE)
+### ========================================
+
+### Conectar al Stream de Eventos
+GET {{baseUrl}}/events/stream
+Authorization: Bearer {{token}}
+
+### ========================================
+### CASOS DE USO COMPLETOS
+### ========================================
+
+### Flujo Estudiante: Reserva + Check-In + Check-Out
+
+# 1. Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "juan.perez@smartlab.com",
+  "password": "Student123!"
+}
+
+# 2. Listar Labs Disponibles
+GET {{baseUrl}}/labs
+Authorization: Bearer {{token}}
+
+# 3. Ver Estaciones del Lab
+GET {{baseUrl}}/stations?labId={{labId}}&status=free
+Authorization: Bearer {{token}}
+
+# 4. Crear Reserva para dentro de 10 minutos
+POST {{baseUrl}}/reservations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "labId": "{{labId}}",
+  "stationId": "{{stationId}}",
+  "start": "2024-01-25T15:00:00.000Z",
+  "end": "2024-01-25T17:00:00.000Z",
+  "purpose": "Desarrollo de proyecto final"
+}
+
+# 5. Ver Mis Reservas
+GET {{baseUrl}}/reservations/user/{{userId}}
+Authorization: Bearer {{token}}
+
+# 6. Check-In (cuando llegue el momento)
+PUT {{baseUrl}}/reservations/{{reservationId}}/checkin
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "method": "manual"
+}
+
+# 7. Check-Out (al terminar)
+PUT {{baseUrl}}/reservations/{{reservationId}}/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "method": "manual"
+}
+
+### Flujo Admin: Gestión Completa
+
+# 1. Login Admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@smartlab.com",
+  "password": "Admin123!"
+}
+
+# 2. Ver Todas las Reservas
+GET {{baseUrl}}/reservations
+Authorization: Bearer {{adminToken}}
+
+# 3. Ver Estadísticas de Lab
+GET {{baseUrl}}/labs/{{labId}}/stats
+Authorization: Bearer {{adminToken}}
+
+# 4. Crear Nuevo Lab
+POST {{baseUrl}}/labs
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Lab de IoT",
+  "code": "LAB-IOT-01",
+  "description": "Laboratorio de Internet de las Cosas",
+  "location": "Edificio E - Piso 2",
+  "capacity": 20,
+  "totalStations": 20
+}
+
+# 5. Agregar Estaciones al Nuevo Lab
+POST {{baseUrl}}/stations
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "IOT-01",
+  "name": "Estación IoT 1",
+  "lab": "{{labId}}",
+  "specifications": {
+    "processor": "Raspberry Pi 4",
+    "ram": "8GB",
+    "sensors": "DHT22, HC-SR04, BMP280",
+    "connectivity": "WiFi, Bluetooth, LoRa"
+  }
+}
+
+# 6. Cambiar Estado de Estación
+PATCH {{baseUrl}}/stations/{{stationId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "free"
+}

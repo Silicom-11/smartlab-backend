@@ -53,15 +53,20 @@ export const getLabById = async (req, res, next) => {
 
     if (!lab) {
       return res.status(404).json({
+        success: false,
         message: 'Laboratorio no encontrado'
       });
     }
 
     // Obtener estaciones del laboratorio
-    const stations = await Station.find({ labId: lab._id }).sort({ code: 1 });
+    const stations = await Station.find({ labId: lab._id, active: true }).sort({ code: 1 });
 
     res.json({
-      ...lab.toObject(),
+      success: true,
+      lab: {
+        ...lab.toObject(),
+        stationsCount: stations.length
+      },
       stations
     });
   } catch (error) {

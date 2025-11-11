@@ -1,7 +1,7 @@
 import Station from '../models/Station.js';
 import Lab from '../models/Lab.js';
 import Reservation from '../models/Reservation.js';
-import { STATION_STATUS } from '../config/constants.js';
+import { STATION_STATUS, RESERVATION_STATUS } from '../config/constants.js';
 import { sendSSEEvent } from '../services/sseService.js';
 
 /**
@@ -263,7 +263,61 @@ export const getStationActiveReservations = async (req, res, next) => {
       });
     }
 
-    // Obtener todas las reservas activas (booked y checked_in) de la estación
+    // PRIMERO: Actualizar reservas expiradas de esta estación
+    const now = new Date();
+    
+    // Buscar reservas booked expiradas
+    const expiredBookedReservations = await Reservation.find({
+      stationId: id,
+      status: RESERVATION_STATUS.BOOKED,
+      end: { $lt: now }
+    });
+
+    for (const reservation of expiredBookedReservations) {
+      console.log(`⏰ Actualizando reserva expirada ${reservation._id} a NO_SHOW`);
+      reservation.status = RESERVATION_STATUS.NO_SHOW;
+      await reservation.save();
+      
+      // Liberar la estación si estaba reservada
+      if (station.currentReservationId?.toString() === reservation._id.toString()) {
+        station.status = STATION_STATUS.FREE;
+        station.currentReservationId = null;
+        await station.save();
+        
+        sendSSEEvent('station_updated', {
+          stationId: station._id,
+          status: STATION_STATUS.FREE
+        });
+      }
+    }
+
+    // Buscar reservas checked-in expiradas
+    const expiredCheckedInReservations = await Reservation.find({
+      stationId: id,
+      status: RESERVATION_STATUS.CHECKED_IN,
+      end: { $lt: now }
+    });
+
+    for (const reservation of expiredCheckedInReservations) {
+      console.log(`⏰ Actualizando reserva con check-in expirada ${reservation._id} a FINISHED`);
+      reservation.status = RESERVATION_STATUS.FINISHED;
+      reservation.checkOutTime = reservation.end;
+      await reservation.save();
+      
+      // Liberar la estación
+      if (station.currentReservationId?.toString() === reservation._id.toString()) {
+        station.status = STATION_STATUS.FREE;
+        station.currentReservationId = null;
+        await station.save();
+        
+        sendSSEEvent('station_updated', {
+          stationId: station._id,
+          status: STATION_STATUS.FREE
+        });
+      }
+    }
+
+    // AHORA SÍ: Obtener las reservas activas reales
     const activeReservations = await Reservation.find({
       stationId: id,
       status: { $in: ['booked', 'checked_in'] }

@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import connectDB from './config/database.js';
 import errorHandler from './middleware/errorHandler.js';
+import { startReservationCleanup } from './services/reservationCleanupService.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -107,7 +108,8 @@ const startServer = async () => {
     await connectDB();
     console.log('✅ Base de datos conectada exitosamente');
 
-    // El scheduler se auto-inicia en reservationScheduler.js
+    // Iniciar servicio de limpieza automática de reservas
+    startReservationCleanup();
     
     // Iniciar servidor
     app.listen(PORT, () => {

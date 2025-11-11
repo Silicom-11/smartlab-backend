@@ -235,6 +235,73 @@ export const getUserReservations = async (req, res, next) => {
     const { userId } = req.params;
     const { status, active } = req.query;
 
+    // PRIMERO: Actualizar automáticamente las reservas expiradas
+    const now = new Date();
+    
+    // Buscar reservas que ya pasaron su hora de fin pero siguen como BOOKED
+    const expiredBookedReservations = await Reservation.find({
+      userId,
+      status: RESERVATION_STATUS.BOOKED,
+      end: { $lt: now } // La hora de fin es menor que ahora
+    });
+
+    // Actualizar a NO_SHOW (no se presentaron)
+    if (expiredBookedReservations.length > 0) {
+      console.log(`⏰ Actualizando ${expiredBookedReservations.length} reservas expiradas a NO_SHOW para usuario ${userId}`);
+      
+      for (const reservation of expiredBookedReservations) {
+        reservation.status = RESERVATION_STATUS.NO_SHOW;
+        await reservation.save();
+        
+        // Liberar la estación si estaba reservada para esta reserva
+        const station = await Station.findById(reservation.stationId);
+        if (station && station.currentReservationId?.toString() === reservation._id.toString()) {
+          station.status = STATION_STATUS.FREE;
+          station.currentReservationId = null;
+          await station.save();
+          
+          // Emitir evento SSE
+          sendSSEEvent('station_updated', {
+            stationId: station._id,
+            status: STATION_STATUS.FREE
+          });
+        }
+      }
+    }
+
+    // Buscar reservas que hicieron check-in pero ya pasó la hora de fin
+    const expiredCheckedInReservations = await Reservation.find({
+      userId,
+      status: RESERVATION_STATUS.CHECKED_IN,
+      end: { $lt: now }
+    });
+
+    // Auto check-out y marcar como FINISHED
+    if (expiredCheckedInReservations.length > 0) {
+      console.log(`⏰ Actualizando ${expiredCheckedInReservations.length} reservas con check-in expiradas a FINISHED para usuario ${userId}`);
+      
+      for (const reservation of expiredCheckedInReservations) {
+        reservation.status = RESERVATION_STATUS.FINISHED;
+        reservation.checkOutTime = reservation.end; // Auto check-out en la hora de fin
+        await reservation.save();
+        
+        // Liberar la estación
+        const station = await Station.findById(reservation.stationId);
+        if (station && station.currentReservationId?.toString() === reservation._id.toString()) {
+          station.status = STATION_STATUS.FREE;
+          station.currentReservationId = null;
+          await station.save();
+          
+          // Emitir evento SSE
+          sendSSEEvent('station_updated', {
+            stationId: station._id,
+            status: STATION_STATUS.FREE
+          });
+        }
+      }
+    }
+
+    // AHORA SÍ: Obtener las reservas con los filtros solicitados
     const filter = { userId };
 
     if (status) {

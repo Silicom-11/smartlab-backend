@@ -71,16 +71,32 @@ export const createReservation = async (req, res, next) => {
     }
 
     // Detectar conflictos con otras reservas
+    // IMPORTANTE: Se requiere mínimo 15 minutos entre reservas
+    const BUFFER_MINUTES = 15;
+    const bufferMs = BUFFER_MINUTES * 60 * 1000;
+    
+    // Buscar conflictos considerando:
+    // 1. No puede haber solapamiento de ningún tipo
+    // 2. Debe haber mínimo 15 min entre el fin de una reserva y el inicio de otra
     const conflictingReservation = await Reservation.findOne({
       stationId,
       status: { $in: [RESERVATION_STATUS.BOOKED, RESERVATION_STATUS.CHECKED_IN] },
       $or: [
-        // La nueva reserva comienza durante una existente
-        { start: { $lte: startDate }, end: { $gt: startDate } },
-        // La nueva reserva termina durante una existente
-        { start: { $lt: endDate }, end: { $gte: endDate } },
-        // La nueva reserva engloba una existente
-        { start: { $gte: startDate }, end: { $lte: endDate } }
+        // La nueva reserva comienza ANTES de que termine una existente (con buffer)
+        { 
+          start: { $lt: startDate }, 
+          end: { $gt: new Date(startDate.getTime() - bufferMs) } 
+        },
+        // La nueva reserva termina DESPUÉS de que comience una existente (con buffer)
+        { 
+          start: { $lt: new Date(endDate.getTime() + bufferMs) }, 
+          end: { $gt: endDate } 
+        },
+        // La nueva reserva CONTIENE completamente una existente
+        { 
+          start: { $gte: startDate }, 
+          end: { $lte: endDate } 
+        }
       ]
     });
 
@@ -97,21 +113,26 @@ export const createReservation = async (req, res, next) => {
         return `${hours}:${minutes}`;
       };
 
-      const occupiedSlots = allActiveReservations.map(res => ({
-        start: formatTime(res.start),
-        end: formatTime(res.end)
-      }));
+      const occupiedSlots = allActiveReservations.map(res => {
+        const endWithBuffer = new Date(res.end.getTime() + bufferMs);
+        return {
+          start: formatTime(res.start),
+          end: formatTime(res.end),
+          nextAvailable: formatTime(endWithBuffer)
+        };
+      });
 
       return res.status(409).json({
-        message: 'Ya existe una reserva en ese horario. Por favor, elige otro horario disponible.',
+        message: 'Conflicto de horario: Esta estación ya está reservada en ese horario o requiere tiempo de preparación.',
         conflict: {
           requestedStart: formatTime(startDate),
           requestedEnd: formatTime(endDate),
           conflictingStart: formatTime(conflictingReservation.start),
-          conflictingEnd: formatTime(conflictingReservation.end)
+          conflictingEnd: formatTime(conflictingReservation.end),
+          bufferMinutes: BUFFER_MINUTES
         },
         occupiedSlots,
-        hint: 'Esta estación tiene reservas en otros horarios, pero sigue disponible. Revisa los horarios ocupados y elige un horario libre.'
+        hint: `Recuerda: Debe haber mínimo ${BUFFER_MINUTES} minutos entre reservas. Si una reserva termina a las 10:30, la siguiente puede comenzar a las 10:45.`
       });
     }
 

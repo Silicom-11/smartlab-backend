@@ -246,6 +246,61 @@ export const deleteStation = async (req, res, next) => {
 };
 
 /**
+ * @desc    Obtener reservas activas de una estación
+ * @route   GET /api/stations/:id/active-reservations
+ * @access  Private
+ */
+export const getStationActiveReservations = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que la estación existe
+    const station = await Station.findById(id);
+    if (!station) {
+      return res.status(404).json({
+        success: false,
+        message: 'Estación no encontrada'
+      });
+    }
+
+    // Obtener todas las reservas activas (booked y checked_in) de la estación
+    const activeReservations = await Reservation.find({
+      stationId: id,
+      status: { $in: ['booked', 'checked_in'] }
+    })
+      .populate('userId', 'name email')
+      .select('start end status purpose userId reservationCode')
+      .sort({ start: 1 });
+
+    // Transformar para frontend
+    const reservationsData = activeReservations.map(res => ({
+      id: res._id,
+      start: res.start,
+      end: res.end,
+      status: res.status,
+      purpose: res.purpose,
+      reservationCode: res.reservationCode,
+      userName: res.userId?.name || 'Usuario',
+      userEmail: res.userId?.email
+    }));
+
+    res.json({
+      success: true,
+      count: reservationsData.length,
+      reservations: reservationsData,
+      station: {
+        id: station._id,
+        name: station.name,
+        code: station.code,
+        status: station.status
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Cambiar estado de estación manualmente
  * @route   PATCH /api/stations/:id/status
  * @access  Private (ADMIN only)

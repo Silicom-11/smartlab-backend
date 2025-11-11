@@ -7,7 +7,8 @@ import {
   createStation,
   updateStation,
   deleteStation,
-  updateStationStatus
+  updateStationStatus,
+  getStationActiveReservations
 } from '../controllers/stationController.js';
 import auth from '../middleware/auth.js';
 import { isAdmin } from '../middleware/roleCheck.js';
@@ -28,6 +29,13 @@ router.get('/', auth, getAllStations);
  * @access  Private
  */
 router.get('/:id', auth, getStationById);
+
+/**
+ * @route   GET /api/stations/:id/active-reservations
+ * @desc    Obtener reservas activas de una estación
+ * @access  Private
+ */
+router.get('/:id/active-reservations', auth, getStationActiveReservations);
 
 /**
  * @route   GET /api/stations/lab/:labId

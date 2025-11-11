@@ -85,12 +85,33 @@ export const createReservation = async (req, res, next) => {
     });
 
     if (conflictingReservation) {
+      // Obtener todas las reservas activas para sugerir horarios disponibles
+      const allActiveReservations = await Reservation.find({
+        stationId,
+        status: { $in: [RESERVATION_STATUS.BOOKED, RESERVATION_STATUS.CHECKED_IN] }
+      }).sort({ start: 1 });
+
+      const formatTime = (date) => {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+      };
+
+      const occupiedSlots = allActiveReservations.map(res => ({
+        start: formatTime(res.start),
+        end: formatTime(res.end)
+      }));
+
       return res.status(409).json({
-        message: 'Conflicto: Ya existe una reserva en ese horario',
+        message: 'Ya existe una reserva en ese horario. Por favor, elige otro horario disponible.',
         conflict: {
-          start: conflictingReservation.start,
-          end: conflictingReservation.end
-        }
+          requestedStart: formatTime(startDate),
+          requestedEnd: formatTime(endDate),
+          conflictingStart: formatTime(conflictingReservation.start),
+          conflictingEnd: formatTime(conflictingReservation.end)
+        },
+        occupiedSlots,
+        hint: 'Esta estación tiene reservas en otros horarios, pero sigue disponible. Revisa los horarios ocupados y elige un horario libre.'
       });
     }
 

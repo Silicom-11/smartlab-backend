@@ -24,10 +24,20 @@ export const getAllStations = async (req, res, next) => {
       .populate('labId', 'name location')
       .sort({ code: 1 });
 
+    // Transformar labId a lab para compatibilidad frontend
+    const stationsWithLab = stations.map(station => {
+      const stationObj = station.toObject();
+      return {
+        ...stationObj,
+        lab: stationObj.labId,
+        labId: stationObj.labId?._id || stationObj.labId
+      };
+    });
+
     res.json({
       success: true,
-      count: stations.length,
-      stations
+      count: stationsWithLab.length,
+      stations: stationsWithLab
     });
   } catch (error) {
     next(error);

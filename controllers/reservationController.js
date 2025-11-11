@@ -67,7 +67,43 @@ export const createReservation = async (req, res, next) => {
       });
     }
 
-    // Detectar conflictos con otras reservas
+    // VALIDACIÓN IMPORTANTE: Usuario no puede tener reservas que se solapen en tiempo
+    // Esto previene que un usuario reserve múltiples estaciones al mismo tiempo
+    const userActiveReservations = await Reservation.find({
+      userId,
+      status: { $in: [RESERVATION_STATUS.BOOKED, RESERVATION_STATUS.CHECKED_IN] }
+    });
+
+    for (const userReservation of userActiveReservations) {
+      const userResStart = new Date(userReservation.start).getTime();
+      const userResEnd = new Date(userReservation.end).getTime();
+      const newStart = startDate.getTime();
+      const newEnd = endDate.getTime();
+
+      // Verificar si hay solapamiento temporal
+      const hasTimeOverlap = 
+        (newStart >= userResStart && newStart < userResEnd) || // Nueva empieza durante existente
+        (newEnd > userResStart && newEnd <= userResEnd) ||     // Nueva termina durante existente
+        (newStart <= userResStart && newEnd >= userResEnd);    // Nueva contiene existente
+
+      if (hasTimeOverlap) {
+        return res.status(409).json({
+          message: 'Ya tienes una reserva activa en ese horario. No puedes estar en dos lugares a la vez.',
+          conflict: {
+            type: 'user_time_conflict',
+            existingReservation: {
+              start: userReservation.start,
+              end: userReservation.end,
+              labId: userReservation.labId,
+              stationId: userReservation.stationId
+            }
+          },
+          hint: 'Cancela o espera a que termine tu reserva actual antes de crear otra en el mismo horario.'
+        });
+      }
+    }
+
+    // Detectar conflictos con otras reservas EN LA MISMA ESTACIÓN
     // IMPORTANTE: Se requiere mínimo 15 minutos entre reservas
     const BUFFER_MINUTES = 15;
     const bufferMs = BUFFER_MINUTES * 60 * 1000;

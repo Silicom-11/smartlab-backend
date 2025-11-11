@@ -82,20 +82,35 @@ export const createReservation = async (req, res, next) => {
       stationId,
       status: { $in: [RESERVATION_STATUS.BOOKED, RESERVATION_STATUS.CHECKED_IN] },
       $or: [
-        // La nueva reserva comienza ANTES de que termine una existente (con buffer)
+        // Caso 1: La nueva reserva empieza DURANTE una existente
+        // Nueva: 09:00, Existente: 08:00-10:00 → CONFLICTO
         { 
-          start: { $lt: startDate }, 
-          end: { $gt: new Date(startDate.getTime() - bufferMs) } 
+          start: { $lte: startDate }, 
+          end: { $gt: startDate } 
         },
-        // La nueva reserva termina DESPUÉS de que comience una existente (con buffer)
+        // Caso 2: La nueva reserva termina DURANTE una existente  
+        // Nueva: 09:00-11:00, Existente: 10:00-12:00 → CONFLICTO
         { 
-          start: { $lt: new Date(endDate.getTime() + bufferMs) }, 
-          end: { $gt: endDate } 
+          start: { $lt: endDate }, 
+          end: { $gte: endDate } 
         },
-        // La nueva reserva CONTIENE completamente una existente
+        // Caso 3: La nueva reserva CONTIENE completamente una existente
+        // Nueva: 08:00-12:00, Existente: 09:00-10:00 → CONFLICTO
         { 
           start: { $gte: startDate }, 
           end: { $lte: endDate } 
+        },
+        // Caso 4: La nueva reserva está muy cerca ANTES (sin buffer suficiente)
+        // Nueva: 08:00-09:00, Existente: 09:10-10:00 → CONFLICTO (solo 10 min de buffer)
+        {
+          start: { $gt: endDate },
+          start: { $lt: new Date(endDate.getTime() + bufferMs) }
+        },
+        // Caso 5: La nueva reserva está muy cerca DESPUÉS (sin buffer suficiente)
+        // Nueva: 10:00-11:00, Existente: 09:00-09:50 → CONFLICTO (solo 10 min de buffer)
+        {
+          end: { $lt: startDate },
+          end: { $gt: new Date(startDate.getTime() - bufferMs) }
         }
       ]
     });

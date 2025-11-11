@@ -12,6 +12,11 @@ router.use(auth);
 // @access  Private/Admin
 router.get('/', userController.getAllUsers);
 
+// @route   PUT /api/users/profile
+// @desc    Update own profile
+// @access  Private
+router.put('/profile', userController.updateProfile);
+
 // @route   PUT /api/users/:userId/role
 // @desc    Update user role (Admin only)
 // @access  Private/Admin

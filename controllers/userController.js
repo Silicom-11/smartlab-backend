@@ -116,3 +116,62 @@ export const toggleUserStatus = async (req, res) => {
     res.status(500).json({ message: 'Error al cambiar estado del usuario' });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, email, currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    // Si se proporciona nueva contraseña, validar la actual
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Proporciona tu contraseña actual' });
+      }
+
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
+      }
+
+      user.password = newPassword;
+    }
+
+    // Actualizar nombre y email
+    if (name) user.name = name;
+    if (email) {
+      // Verificar si el email ya existe (excepto el usuario actual)
+      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'El email ya está en uso' });
+      }
+      user.email = email;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Perfil actualizado exitosamente',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        active: user.isActive,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Error al actualizar perfil' });
+  }
+};

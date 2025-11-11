@@ -67,40 +67,26 @@ export const createReservation = async (req, res, next) => {
       });
     }
 
-    // VALIDACIÓN IMPORTANTE: Usuario no puede tener reservas que se solapen en tiempo
-    // Esto previene que un usuario reserve múltiples estaciones al mismo tiempo
+    // VALIDACIÓN CRÍTICA: Solo UNA reserva activa por usuario
+    // No importa el horario ni la estación - una persona solo puede tener una reserva a la vez
     const userActiveReservations = await Reservation.find({
       userId,
       status: { $in: [RESERVATION_STATUS.BOOKED, RESERVATION_STATUS.CHECKED_IN] }
     });
 
-    for (const userReservation of userActiveReservations) {
-      const userResStart = new Date(userReservation.start).getTime();
-      const userResEnd = new Date(userReservation.end).getTime();
-      const newStart = startDate.getTime();
-      const newEnd = endDate.getTime();
-
-      // Verificar si hay solapamiento temporal
-      const hasTimeOverlap = 
-        (newStart >= userResStart && newStart < userResEnd) || // Nueva empieza durante existente
-        (newEnd > userResStart && newEnd <= userResEnd) ||     // Nueva termina durante existente
-        (newStart <= userResStart && newEnd >= userResEnd);    // Nueva contiene existente
-
-      if (hasTimeOverlap) {
-        return res.status(409).json({
-          message: 'Ya tienes una reserva activa en ese horario. No puedes estar en dos lugares a la vez.',
-          conflict: {
-            type: 'user_time_conflict',
-            existingReservation: {
-              start: userReservation.start,
-              end: userReservation.end,
-              labId: userReservation.labId,
-              stationId: userReservation.stationId
-            }
-          },
-          hint: 'Cancela o espera a que termine tu reserva actual antes de crear otra en el mismo horario.'
-        });
-      }
+    if (userActiveReservations.length > 0) {
+      const activeRes = userActiveReservations[0];
+      return res.status(409).json({
+        message: 'Ya tienes una reserva activa. Debes completarla o cancelarla antes de crear otra.',
+        activeReservation: {
+          start: activeRes.start,
+          end: activeRes.end,
+          status: activeRes.status,
+          stationId: activeRes.stationId,
+          labId: activeRes.labId
+        },
+        hint: 'Completa tu check-in, usa la estación y haz check-out, o cancela la reserva para crear una nueva.'
+      });
     }
 
     // Detectar conflictos con otras reservas EN LA MISMA ESTACIÓN

@@ -122,8 +122,11 @@ export const createReservation = async (req, res, next) => {
       }
 
       // Caso 4: Buffer insuficiente - La nueva está muy cerca DESPUÉS
-      // La existente termina ANTES de que empiece la nueva, pero con menos de 15 min
-      if (existingEnd < newStart && (newStart - existingEnd) < bufferMs) {
+      // La existente termina ANTES O AL MISMO TIEMPO que empiece la nueva, pero con menos de 15 min
+      // Ejemplo: Existente 08:30-10:30, Nueva 10:30-11:30 → 0 min de buffer → RECHAZAR
+      // Ejemplo: Existente 08:30-10:30, Nueva 10:44-11:44 → 14 min de buffer → RECHAZAR
+      // Ejemplo: Existente 08:30-10:30, Nueva 10:45-11:45 → 15 min de buffer → ACEPTAR
+      if (existingEnd <= newStart && (newStart - existingEnd) < bufferMs) {
         const minutesGap = Math.floor((newStart - existingEnd) / (60 * 1000));
         return res.status(409).json({
           message: `Conflicto: Se requiere mínimo ${BUFFER_MINUTES} minutos entre reservas. Solo hay ${minutesGap} minutos de separación.`,
@@ -138,8 +141,8 @@ export const createReservation = async (req, res, next) => {
       }
 
       // Caso 5: Buffer insuficiente - La nueva está muy cerca ANTES
-      // La nueva termina ANTES de que empiece la existente, pero con menos de 15 min
-      if (newEnd < existingStart && (existingStart - newEnd) < bufferMs) {
+      // La nueva termina ANTES O AL MISMO TIEMPO que empiece la existente, pero con menos de 15 min
+      if (newEnd <= existingStart && (existingStart - newEnd) < bufferMs) {
         const minutesGap = Math.floor((existingStart - newEnd) / (60 * 1000));
         return res.status(409).json({
           message: `Conflicto: Se requiere mínimo ${BUFFER_MINUTES} minutos entre reservas. Solo hay ${minutesGap} minutos de separación.`,

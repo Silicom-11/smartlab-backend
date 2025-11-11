@@ -10,8 +10,12 @@ import {
   cancelReservation,
   getAllReservations
 } from '../controllers/reservationController.js';
+import {
+  createBulkReservation,
+  cancelBulkReservation
+} from '../controllers/bulkReservationController.js';
 import auth from '../middleware/auth.js';
-import { isAdmin } from '../middleware/roleCheck.js';
+import { isAdmin, isTeacher } from '../middleware/roleCheck.js';
 import validateRequest from '../middleware/validateRequest.js';
 
 const router = express.Router();
@@ -22,6 +26,61 @@ const router = express.Router();
  * @access  Private (ADMIN only)
  */
 router.get('/', auth, isAdmin, getAllReservations);
+
+/**
+ * @route   POST /api/reservations/bulk
+ * @desc    Reserva masiva de laboratorio completo (TEACHER only)
+ * @access  Private (TEACHER role)
+ */
+router.post(
+  '/bulk',
+  auth,
+  isTeacher,
+  [
+    body('userId')
+      .notEmpty().withMessage('El ID del usuario es requerido')
+      .isMongoId().withMessage('ID de usuario inválido'),
+    body('labId')
+      .notEmpty().withMessage('El ID del laboratorio es requerido')
+      .isMongoId().withMessage('ID de laboratorio inválido'),
+    body('start')
+      .notEmpty().withMessage('La fecha de inicio es requerida')
+      .isISO8601().withMessage('Fecha de inicio inválida'),
+    body('end')
+      .notEmpty().withMessage('La fecha de fin es requerida')
+      .isISO8601().withMessage('Fecha de fin inválida'),
+    body('purpose')
+      .optional()
+      .trim()
+      .isLength({ max: 200 }).withMessage('El propósito no puede exceder 200 caracteres')
+  ],
+  validateRequest,
+  createBulkReservation
+);
+
+/**
+ * @route   DELETE /api/reservations/bulk
+ * @desc    Cancelar reservas masivas (TEACHER only)
+ * @access  Private (TEACHER role)
+ */
+router.delete(
+  '/bulk',
+  auth,
+  isTeacher,
+  [
+    body('labId')
+      .notEmpty().withMessage('El ID del laboratorio es requerido')
+      .isMongoId().withMessage('ID de laboratorio inválido'),
+    body('start')
+      .notEmpty().withMessage('La fecha de inicio es requerida')
+      .isISO8601().withMessage('Fecha de inicio inválida'),
+    body('userId')
+      .notEmpty().withMessage('El ID del usuario es requerido')
+      .isMongoId().withMessage('ID de usuario inválido')
+  ],
+  validateRequest,
+  cancelBulkReservation
+);
 
 /**
  * @route   POST /api/reservations

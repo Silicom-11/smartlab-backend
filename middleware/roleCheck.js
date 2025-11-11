@@ -30,6 +30,11 @@ export const checkRole = (...allowedRoles) => {
 export const isAdmin = checkRole(ROLES.ADMIN);
 
 /**
+ * Middleware para verificar que el usuario sea TEACHER
+ */
+export const isTeacher = checkRole(ROLES.TEACHER, ROLES.ADMIN); // Admin también puede hacer reservas masivas
+
+/**
  * Middleware para verificar que el usuario sea ADMIN o TEACHER
  */
 export const isAdminOrTeacher = checkRole(ROLES.ADMIN, ROLES.TEACHER);
@@ -42,6 +47,7 @@ export const isAuthenticated = checkRole(ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDE
 export default {
   checkRole,
   isAdmin,
+  isTeacher,
   isAdminOrTeacher,
   isAuthenticated
 };

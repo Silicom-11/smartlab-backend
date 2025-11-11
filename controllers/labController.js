@@ -81,14 +81,15 @@ export const getLabById = async (req, res, next) => {
  */
 export const createLab = async (req, res, next) => {
   try {
-    const { name, location, description, capacity, openingHours } = req.body;
+    const { name, location, description, capacity, openingHours, image } = req.body;
 
     const lab = await Lab.create({
       name,
       location,
       description,
       capacity,
-      openingHours
+      openingHours,
+      image
     });
 
     res.status(201).json({
@@ -107,7 +108,7 @@ export const createLab = async (req, res, next) => {
  */
 export const updateLab = async (req, res, next) => {
   try {
-    const { name, location, description, capacity, openingHours, active } = req.body;
+    const { name, location, description, capacity, openingHours, active, image } = req.body;
 
     const lab = await Lab.findById(req.params.id);
 
@@ -124,6 +125,7 @@ export const updateLab = async (req, res, next) => {
     if (capacity !== undefined) lab.capacity = capacity;
     if (openingHours !== undefined) lab.openingHours = openingHours;
     if (active !== undefined) lab.active = active;
+    if (image !== undefined) lab.image = image;
 
     await lab.save();
 

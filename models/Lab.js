@@ -18,6 +18,11 @@ const labSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'La descripción no puede exceder 500 caracteres']
   },
+  image: {
+    type: String,
+    trim: true,
+    default: 'https://images.unsplash.com/photo-1581093458791-9d42e72e2c0f?w=800&q=80'
+  },
   capacity: {
     type: Number,
     default: 0,

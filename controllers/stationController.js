@@ -57,11 +57,23 @@ export const getStationById = async (req, res, next) => {
 
     if (!station) {
       return res.status(404).json({
+        success: false,
         message: 'Estación no encontrada'
       });
     }
 
-    res.json(station);
+    // Transformar labId a lab para compatibilidad frontend
+    const stationObj = station.toObject();
+    const stationWithLab = {
+      ...stationObj,
+      lab: stationObj.labId,
+      labId: stationObj.labId?._id || stationObj.labId
+    };
+
+    res.json({
+      success: true,
+      station: stationWithLab
+    });
   } catch (error) {
     next(error);
   }

@@ -30,11 +30,8 @@ export const createReservation = async (req, res, next) => {
       });
     }
 
-    if (station.status !== STATION_STATUS.FREE) {
-      return res.status(409).json({
-        message: 'La estación no está disponible'
-      });
-    }
+    // NOTA: NO validamos station.status aquí porque permitimos múltiples reservas
+    // en diferentes horarios. La validación de conflictos se hace más abajo.
 
     // Convertir fechas
     const startDate = new Date(start);
